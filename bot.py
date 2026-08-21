@@ -157,4 +157,5 @@ async def view_claims(ctx):
 # ---------------------------------------------------------
 # 5. RUN THE BOT
 # ---------------------------------------------------------
-bot.run("MTUzMjk2Nzk4ODUyMzk1ODM4Mw.GaAa_X.J-yE4WF0wD6kReRa2vj8SL1oSguRlvJTUYvq7Q")
+import os
+bot.run(os.environ.get("DISCORD_TOKEN"))
