@@ -158,5 +158,8 @@ async def view_claims(ctx):
 # ---------------------------------------------------------
 # 5. RUN THE BOT
 # ---------------------------------------------------------
-import os
-bot.run(os.environ.get("DISCORD_TOKEN"))
+TOKEN = os.environ.get("DISCORD_TOKEN")
+if not TOKEN:
+    raise ValueError("DISCORD_TOKEN variable not found! Make sure it is set in Railway's Variables tab.")
+
+bot.run(TOKEN)
