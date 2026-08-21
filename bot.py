@@ -6,8 +6,11 @@ import discord
 from discord.ext import commands
 
 # ---------------------------------------------------------
-# 1. DEFINE YOUR EFFECT POOL (Exactly 37 Effects)
+# CONFIGURATION & CONSTANTS
 # ---------------------------------------------------------
+# Replace this with your actual private admin channel ID (integer, no quotes)
+ADMIN_CHANNEL_ID = 1532985566088532088  
+
 EFFECT_POOL = [
     "BCC Wooden Planks Obsolete",
     "BCC Cross Melt",
@@ -46,12 +49,12 @@ EFFECT_POOL = [
     "S_Kaleido",
     "S_Glow",
     "BCC Fast Film Process"
-]  # 37 distinct Sapphire, BCC, and native AE/PR effects
+]
 
 DATA_FILE = "claimed_effects.json"
 
 # ---------------------------------------------------------
-# 2. JSON TRACKING HELPER FUNCTIONS
+# JSON TRACKING HELPER FUNCTIONS
 # ---------------------------------------------------------
 def load_claimed_data():
     try:
@@ -67,7 +70,7 @@ def save_claimed_data(data):
 claimed_users = load_claimed_data()
 
 # ---------------------------------------------------------
-# 3. BOT INITIALIZATION & BUTTON VIEW
+# BOT INITIALIZATION & BUTTON VIEW
 # ---------------------------------------------------------
 intents = discord.Intents.default()
 intents.message_content = True
@@ -75,7 +78,7 @@ bot = commands.Bot(command_prefix="!", intents=intents)
 
 class OneTimeEffectPickerView(discord.ui.View):
     def __init__(self):
-        super().__init__(timeout=None)  # Keeps button persistent across bot restarts
+        super().__init__(timeout=None)
 
     @discord.ui.button(
         label="press this button to get your effects", 
@@ -104,7 +107,7 @@ class OneTimeEffectPickerView(discord.ui.View):
             # Direct Message the user
             await interaction.user.send(formatted_message)
             
-            # Save claim data to file
+            # Save claim data to local tracking
             claimed_users[user_id_str] = {
                 "username": str(interaction.user),
                 "effects": selected_effects,
@@ -112,8 +115,22 @@ class OneTimeEffectPickerView(discord.ui.View):
             }
             save_claimed_data(claimed_users)
 
-            # Confirm to the user in the channel (only visible to them)
+            # Confirm to the user in the channel
             await interaction.response.send_message("Check your DMs! 📩 (This was your one-time claim)", ephemeral=True)
+
+            # AUTOMATIC BACKUP LOG TO ADMIN CHANNEL
+            admin_channel = interaction.client.get_channel(ADMIN_CHANNEL_ID)
+            if admin_channel:
+                log_embed = discord.Embed(
+                    title="📥 New Effect Claimed",
+                    color=discord.Color.green(),
+                    timestamp=datetime.utcnow()
+                )
+                log_embed.add_field(name="User", value=f"{interaction.user.mention} (`{interaction.user}`)", inline=False)
+                log_embed.add_field(name="User ID", value=f"`{user_id_str}`", inline=False)
+                log_embed.add_field(name="Assigned Effects", value=formatted_list, inline=False)
+                
+                await admin_channel.send(embed=log_embed)
 
         except discord.Forbidden:
             await interaction.response.send_message(
@@ -122,11 +139,11 @@ class OneTimeEffectPickerView(discord.ui.View):
             )
 
 # ---------------------------------------------------------
-# 4. BOT EVENTS AND ADMIN COMMANDS
+# BOT EVENTS AND ADMIN COMMANDS
 # ---------------------------------------------------------
 @bot.event
 async def on_ready():
-    bot.add_view(OneTimeEffectPickerView())  # Register persistent view
+    bot.add_view(OneTimeEffectPickerView())
     print(f"Logged in as {bot.user} (ID: {bot.user.id})")
 
 @bot.command()
@@ -156,7 +173,7 @@ async def view_claims(ctx):
     await ctx.send(summary)
 
 # ---------------------------------------------------------
-# 5. RUN THE BOT
+# RUN THE BOT
 # ---------------------------------------------------------
 TOKEN = os.environ.get("DISCORD_TOKEN")
 if not TOKEN:
